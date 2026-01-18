@@ -20,17 +20,17 @@ create_db(){
 
     read -r -p "Enter database name: " db
 
-    if ! is_valid $db; then
-    echo "invalid name, database name be like (myDatabase, mydatabase2, my_database)"
-    
-    
-    elif db_exists $db; then
-    echo "database already exists"
-
+    if [[ "$db" =~ " " ]]; then
+    echo "Error: database name must not contain spaces"
+    elif ! is_valid "$db"; then
+        echo "Error: database name must start with a letter and contain only letters, numbers, or _"
+    elif db_exists "$db"; then
+        echo "Database already exists"
     else
-    mkdir $path/$db
-    echo "$db has been created"
+        mkdir -p "$path/$db"
+        echo "$db has been created"
     fi
+
 }
 list_database(){
 
@@ -46,6 +46,7 @@ connect_db(){
         if [[ -z $db ]]; then
             echo "Invalid choice"
         else
+        cd "$path/$db"
         echo "connected to: $db"
         fi
     break
@@ -101,6 +102,7 @@ break
 *) echo "Invaild input"; break;;
 esac
 done
+echo "==================================================================="
 if [[ $flag == 0 ]]; then
     break
     fi
