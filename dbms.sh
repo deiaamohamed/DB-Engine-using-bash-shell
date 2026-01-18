@@ -2,14 +2,18 @@
 
 path="./DBMS"
 
+if [[ ! -d $path ]]; then
+    mkdir $path
+fi
+
 
 is_valid(){
 
-    [[ $1 =~ ^[a-zA-Z][0-9]*$ ]]
+    [[ $1 =~ ^[a-zA-Z][A-Za-z0-9_]*$ ]]
 }
 
 db_exists(){
-  [[ -d "$path/$1"]]
+  [[ -d "$path/$1" ]]
 }
 
 create_db(){
@@ -23,23 +27,28 @@ create_db(){
     elif db_exists $db; then
     echo "database already exists"
 
-    else; then
+    else
     mkdir $path/$db
-    echo `$db has been created`
+    echo "$db has been created"
     fi
 }
 list_database(){
 
-    ls -d $path
+    ls -1 $path 
 }
 
 connect_db(){
 
-   $list=$(list_database)
+   
     let counter=0
-   select db in ${list[@]}; 
+   select db in $(list_database); 
    do
-    echo "connected to: $db"
+        if [[ -z $db ]]; then
+            echo "Invalid choice"
+        else
+        echo "connected to: $db"
+        fi
+    break
     done    
 }
 
@@ -47,30 +56,52 @@ connect_db(){
 drop_database(){
 
 
-    select db in ${list[@]}
+    select db in $(list_database)
     do
-        rm -r /$path/$db
+       read -r -p "Are you sure to delete $db? (y/n): " ans
+       case $ans in
+          Y|y)
+            rm -r $path/$db
+            echo "Dropped: $db"
+            ;;
+            *)
+            echo "Cancelled"
+            ;;
+            esac
+            break
     done
 
 }
-
-
-menu=("CreateTable" "List DataBases" "drop database"  "Exit" )
-select in ${menu[@]}
+flag=1
+while true
+do
+menu=("Create Database" "List DataBases" "Connect Database" "drop database"  "Exit" )
+select choice in "${menu[@]}";
 do
 case $choice in
 
-create_db)
+"Create Database") create_db; 
 break
 ;;
-list_database)
+"List DataBases") list_database;
 break
 ;;
-drop_database)
+"Connect Database") connect_db;
 break
 ;;
-*)
-return 1
+"drop database") drop_database;
+break
 ;;
+"Exit")
+     echo "bye bye :D"
+     flag=0
+        
+break
+;;
+*) echo "Invaild input"; break;;
 esac
+done
+if [[ $flag == 0 ]]; then
+    break
+    fi
 done
