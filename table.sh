@@ -97,9 +97,70 @@ list_tables() {
   local meta="$path/$db/$table.meta"
   local data="$path/$db/$table.data"
 
-  echo "Selected table: $table"
-  echo "Meta file: $meta"
-  echo "Data file: $data"
+
+cols=$(
+  awk -F= '
+    /^cols=/ {
+      print $2
+    }
+  ' "$meta"
+)
+pk=$(
+  awk -F= '
+    /^pk=/ {
+      print $2
+    }
+  ' "$meta"
+)
+col_names=()
+col_types=()
+
+for ((i=1; i<=cols; i++)); do
+
+  line=$(
+    awk -F= -v col="col$i" '
+      $1 == col {
+        print $2
+      }
+    ' "$meta"
+  )
+
+  name=$(echo "$line" | awk -F: '{ print $1 }')
+  type=$(echo "$line" | awk -F: '{ print $2 }')
+
+  col_names+=("$name")
+  col_types+=("$type")
+
+done
+values=()
+for ((i=0; i<cols; i++)); do
+  read -r -p "Enter ${col_names[i]} (${col_types[i]}): " v
+
+  if [[ "$v" == *:* ]]; then
+    echo "Error: ':' not allowed"
+    return 1
+  fi
+
+  case "${col_types[i]}" in
+    int)
+      if ! [[ "$v" =~ ^[0-9]+$ ]]; then
+        echo "Error: ${col_names[i]} must be an integer"
+        return 1
+      fi
+      ;;
+    string)
+      if [[ -z "$v" ]]; then
+        echo "Error: ${col_names[i]} must not be empty"
+        return 1
+      fi
+      ;;
+  esac
+
+  values+=("$v")
+done
+
+
+
 }
 
 table_menu(){
