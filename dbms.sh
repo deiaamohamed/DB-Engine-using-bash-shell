@@ -46,8 +46,10 @@ connect_db(){
         if [[ -z $db ]]; then
             echo "Invalid choice"
         else
-        cd "$path/$db"
+        
         echo "connected to: $db"
+        source ./table.sh
+        table_menu "$db"
         fi
     break
     done    

@@ -1,0 +1,5 @@
+cols=3
+pk=1
+col1=st_id:int
+col2=student_name:string
+col3=grades:int
