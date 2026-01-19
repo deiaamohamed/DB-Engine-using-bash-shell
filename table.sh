@@ -74,21 +74,39 @@ create_table(){
     done
   } > "$path/$db/$table.meta"
 
-  # Create empty data file
   : > "$path/$db/$table.data"
 }
 
+list_tables() {
+  local db="$1"
+  ls -1 "$path/$db" | sed 's/\.meta$//' | grep -v '\.data$'
+}
 
-insert_table(){
+    insert_into_table() {
+  local db="$1"
 
-    
+  echo "Choose table to insert data:"
+  select table in $(list_tables "$db"); do
+    if [[ -z "$table" ]]; then
+      echo "Invalid choice"
+      return 1
+    fi
+    break
+  done
+
+  local meta="$path/$db/$table.meta"
+  local data="$path/$db/$table.data"
+
+  echo "Selected table: $table"
+  echo "Meta file: $meta"
+  echo "Data file: $data"
 }
 
 table_menu(){
    db="$1"
   
 
-  menu=("Create Table" "List Tables" "insert into table" "Drop Table" "Back")
+  menu=("Create Table" "List Tables" "Insert Into Table" "Drop Table" "Back")
   select choice in "${menu[@]}"; do
     case "$choice" in
       "Create Table") 
@@ -99,6 +117,8 @@ table_menu(){
       list_tables "$db"; 
       break 
       ;;
+      "Insert Into Table") insert_into_table "$db"; 
+      break ;;
       "Drop Table") 
       drop_table "$db"; 
       break ;;
