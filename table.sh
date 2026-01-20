@@ -80,7 +80,7 @@ list_tables() {
   ls -1 "$path/$db" | sed 's/\.meta$//' | grep -v '\.data$'
 }
 
-    insert_into_table() {
+insert_into_table() {
   local db="$1"
 
   echo "Choose table to insert data:"
@@ -96,20 +96,16 @@ list_tables() {
   local data="$path/$db/$table.data"
 
 
-cols=$(
-  awk -F= '
-    /^cols=/ {
+cols=$(awk -F= '{
+      if ($1 == "cols"){
+        print $2
+      }
+}' "$meta")
+pk=$(awk -F= '{
+  if ($1 == "pk"){
       print $2
-    }
-  ' "$meta"
-)
-pk=$(
-  awk -F= '
-    /^pk=/ {
-      print $2
-    }
-  ' "$meta"
-)
+  }
+}' "$meta")
 col_names=()
 col_types=()
 
@@ -134,10 +130,6 @@ values=()
 for ((i=0; i<cols; i++)); do
   read -r -p "Enter ${col_names[i]} (${col_types[i]}): " v
 
-  if [[ "$v" == *:* ]]; then
-    echo "Error: ':' not allowed"
-    return 1
-  fi
 
   case "${col_types[i]}" in
     int)
@@ -161,10 +153,12 @@ done
 
 pk_val="${values[pk-1]}"
 
-if awk -F: -v p="$pk" -v val="$pk_val" '
-  $p == val { exit 0 }
-  END { exit 1 }
-' "$data"
+if awk -F: -v p="$pk" -v val="$pk_val" '{
+  if ($p == val) {
+    exit 0
+  }
+}
+END { exit 1 }' "$data"
 then
   echo "Error: primary key '$pk_val' already exists"
   return 1
@@ -177,22 +171,26 @@ echo "Inserted successfully into $table"
 }
 select_from_table() {
   local db="$1"
-  local table
 
   echo "Choose table to select from:"
-  select table in $(list_tables "$db"); do
-    [[ -z "$table" ]] && echo "Invalid choice" && return 1
+  select table in $(list_tables "$db"); 
+  do
+    if [[ -z "$table" ]]; then
+    echo "Invalid choice" 
+     return 1
+     fi
     break
   done
 
   local meta="$path/$db/$table.meta"
   local data="$path/$db/$table.data"
 
-  # Read cols
-  local cols
-  cols=$(awk -F= '/^cols=/{print $2}' "$meta")
+cols=$(awk -F= '{
+  if ($1 == "cols") {
+    print $2
+  }
+}' "$meta")
 
-  # Load column names
   col_names=()
   local i line name
   for ((i=1; i<=cols; i++)); do
@@ -202,13 +200,12 @@ select_from_table() {
   done
 
   echo "---- $table ----"
-  # Print header
+
   for ((i=0; i<cols; i++)); do
     printf "%-15s" "${col_names[i]}"
   done
   echo
   echo "-----------------------------------------------"
-  # Print table data (rows)
 while IFS=':' read -r -a row; do
   for ((i=0; i<cols; i++)); do
     printf "%-16s" "${row[i]}"
@@ -219,11 +216,13 @@ done < "$data"
 }
 delete_from_table() {
   local db="$1"
-  local table
 
   echo "Choose table to delete from:"
   select table in $(list_tables "$db"); do
-    [[ -z "$table" ]] && echo "Invalid choice" && return 1
+    if [[ -z "$table" ]];then
+     echo "Invalid choice"
+     return 1
+     fi
     break
   done
 
@@ -231,9 +230,16 @@ delete_from_table() {
   local data="$path/$db/$table.data"
   local tmp="$path/$db/$table.tmp"
 
-  # Read pk index (1-based)
+ touch "$tmp"
+    > "$tmp"
+
+
   local pk
-  pk=$(awk -F= '/^pk=/{print $2}' "$meta")
+  pk=$(awk -F= '{
+        if($1 == "pk"){
+          print $2
+        }
+  }' "$meta")
 
   read -r -p "Enter PK value to delete: " pk_val
   if [[ -z "$pk_val" ]]; then
@@ -243,7 +249,6 @@ delete_from_table() {
 
   deleted=0
 
-  # Read each row, write back all rows except the matched one
   while IFS=':' read -r -a row; do
     if [[ "${row[pk-1]}" == "$pk_val" ]]; then
       deleted=1
@@ -255,7 +260,6 @@ delete_from_table() {
     unset IFS
   done < "$data"
 
-  # Replace data with tmp (even if empty)
   mv "$tmp" "$data"
 
   if [[ $deleted -eq 1 ]]; then
@@ -265,6 +269,38 @@ delete_from_table() {
   fi
 }
 
+drop_table(){
+
+  echo "choose table to drop"
+    
+      local db=$1
+
+
+
+    select table in $(list_tables "$db");
+    do
+      if [[ -z $table ]]; then
+
+            echo "invalid choice";
+            return 1
+            fi
+            read -r -p "Are you sure to delete $table? (y/n): " ans
+                local meta="$path/$db/$table.meta"
+                local data="$path/$db/$table.data"
+       case $ans in
+          Y|y)
+            rm -r $meta
+            echo "Dropped: $table"
+            ;;
+            *)
+            echo "Cancelled"
+            ;;
+            esac
+            break
+    done
+  
+
+}
 
 table_menu(){
    db="$1"
