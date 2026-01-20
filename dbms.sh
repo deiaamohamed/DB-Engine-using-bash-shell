@@ -61,6 +61,10 @@ drop_database(){
 
     select db in $(list_database)
     do
+
+        if [[ -z $db ]]; then
+            echo "invalid input"
+        else 
        read -r -p "Are you sure to delete $db? (y/n): " ans
        case $ans in
           Y|y)
@@ -72,6 +76,7 @@ drop_database(){
             ;;
             esac
             break
+            fi
     done
 
 }
